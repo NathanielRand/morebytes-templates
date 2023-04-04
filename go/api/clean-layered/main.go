@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/NathanielRand/morebytes-templates/go/api/clean-layered/internal/server"
+	"github.com/NathanielRand/morebytes-templates/go/api/clean-layered/cmd/server"
 )
 
 func main() {
