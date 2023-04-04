@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"net/http/pprof"
+
 	"github.com/NathanielRand/morebytes-templates/go/api/clean-layered/internal/handlers"
 	"github.com/NathanielRand/morebytes-templates/go/api/clean-layered/internal/middleware"
 	"github.com/gorilla/mux"
@@ -22,8 +24,15 @@ func SetupRouter() *mux.Router {
 	chain = chain.Append(middleware.SecurityMiddleware)
 	chain = chain.Append(middleware.LoggingMiddleware)
 
-	// Add your API endpoints to the router
+	// API endpoints to the router
 	router.Handle("/api/v1/hello", chain.ThenFunc(handlers.HelloHandler)).Methods("GET")
+
+	// Register pprof endpoints
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	return router
 }
