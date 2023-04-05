@@ -1,75 +1,68 @@
 package middleware
 
 import (
-    "net/http"
-    "sync"
-    "time"
-
-    "golang.org/x/time/rate"
+	"net/http"
+	"sync"
+	"time"
 )
 
-type TokenBucket struct {
-    tokens         int
-    lastRefillTime time.Time
+// UserQuota stores the usage and limit information for a user
+type UserQuota struct {
+	Usage  int64
+	Limit  int64
+	Last   time.Time
+	Tokens int64
 }
 
-var userTokenBuckets = make(map[string]*TokenBucket)
-var wg sync.WaitGroup
-
+// QuotaMiddleware is a middleware function that enforces a quota
+// for each user based on a token bucket algorithm.
 func QuotaMiddleware(next http.Handler) http.Handler {
-    // Allow a maximum of 100 requests per second
-    rateLimiter := rate.NewLimiter(rate.Limit(100), 100)
+	// Your quota middleware logic goes here
+	// Use a sync.Map to store the UserQuota information for each user
+	userQuotas := new(sync.Map)
 
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        userID := r.Header.Get("X-User-ID")
-        if userID == "" {
-            http.Error(w, "X-User-ID header is missing", http.StatusBadRequest)
-            return
-        }
+	// Return the middleware function
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get the user's ID from the request
+		userID := "someUserID" // Replace this with your code to extract the user ID from the request
 
-        // Wait for the rate limiter to allow the request to proceed
-        if !rateLimiter.Allow() {
-            http.Error(w, "Too many requests", http.StatusTooManyRequests)
-            return
-        }
+		// Get or create the user's quota information
+		userQuota, _ := userQuotas.LoadOrStore(userID, &UserQuota{
+			Usage:  0,
+			Limit:  1000, // Replace with your desired limit
+			Last:   time.Now(),
+			Tokens: 1000, // Replace with your desired initial tokens
+		})
 
-		// Get the user's token bucket, or create a new one if it doesn't exist
-        bucket, ok := userTokenBuckets[userID]
-        if !ok {
-            bucket = &TokenBucket{tokens: 10, lastRefillTime: time.Now()}
-            userTokenBuckets[userID] = bucket
-        }
+		// Calculate the time elapsed since the last request
+		elapsed := time.Since(userQuota.(*UserQuota).Last)
 
-        // Refill the bucket with new tokens
-        now := time.Now()
-        elapsed := now.Sub(bucket.lastRefillTime)
-        tokensToAdd := int(elapsed.Seconds()) // add one token per second
-        if tokensToAdd > 0 {
-            bucket.tokens = min(bucket.tokens+tokensToAdd, 10)
-            bucket.lastRefillTime = now
-        }
+		// Calculate the number of tokens that should be added to the bucket
+		addTokens := int64(elapsed.Seconds() * float64(userQuota.(*UserQuota).Limit) / 3600)
 
-        // Check if the bucket has enough tokens for the request
-        if bucket.tokens <= 0 {
-            http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
-            return
-        }
+		// Add the tokens to the bucket, up to the maximum limit
+		userQuota.(*UserQuota).Tokens = min(userQuota.(*UserQuota).Tokens+addTokens, userQuota.(*UserQuota).Limit)
 
-		// Decrement the number of tokens in the bucket
-        bucket.tokens--
+		// Check if the request can be served
+		if userQuota.(*UserQuota).Tokens > 0 {
+			// Serve the request
+			userQuota.(*UserQuota).Tokens--
+			userQuota.(*UserQuota).Usage++
+			userQuota.(*UserQuota).Last = time.Now()
+			next.ServeHTTP(w, r)
+			return
+		}
 
-        // Increment the WaitGroup counter to indicate that a request is being processed
-        wg.Add(1)
-        defer wg.Done()
+		// Return an error response if the quota has been exceeded
+		http.Error(w, "quota exceeded", http.StatusTooManyRequests)
+	})
 
-        // Call the next middleware/handler in the chain
-        next.ServeHTTP(w, r)
-    })
 }
 
-func min(a, b int) int {
-    if a < b {
-        return a
-    }
-    return b
+// min returns the smaller of two integers
+func min(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }
