@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -29,9 +30,9 @@ func QuotaMiddleware(next http.Handler) http.Handler {
 		// Get or create the user's quota information
 		userQuota, _ := userQuotas.LoadOrStore(userID, &UserQuota{
 			Usage:  0,
-			Limit:  1000, // Replace with your desired limit
+			Limit:  10, // Replace with your desired limit
 			Last:   time.Now(),
-			Tokens: 1000, // Replace with your desired initial tokens
+			Tokens: 10, // Replace with your desired initial tokens
 		})
 
 		// Calculate the time elapsed since the last request
@@ -49,6 +50,10 @@ func QuotaMiddleware(next http.Handler) http.Handler {
 			userQuota.(*UserQuota).Tokens--
 			userQuota.(*UserQuota).Usage++
 			userQuota.(*UserQuota).Last = time.Now()
+
+			// Print the quota information
+			fmt.Printf("User %s: %d/%d tokens, %d/%d requests\n", userID, userQuota.(*UserQuota).Tokens, userQuota.(*UserQuota).Limit, userQuota.(*UserQuota).Usage, userQuota.(*UserQuota).Limit)
+
 			next.ServeHTTP(w, r)
 			return
 		}

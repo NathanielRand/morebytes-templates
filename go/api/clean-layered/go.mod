@@ -7,4 +7,7 @@ require (
 	github.com/justinas/alice v1.2.0
 )
 
-require golang.org/x/time v0.3.0 // indirect
+require (
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	golang.org/x/time v0.3.0 // indirect
+)

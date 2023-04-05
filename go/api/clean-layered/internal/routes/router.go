@@ -18,14 +18,14 @@ func SetupRouter() *mux.Router {
 	chain := alice.New()
 
 	// Add middleware to the chain for authentication, rate limiting, caching, and quotas
+	chain = chain.Append(middleware.SecurityMiddleware)
 	chain = chain.Append(middleware.AuthenticationMiddleware)
 	chain = chain.Append(func(next http.Handler) http.Handler {
 		return middleware.AuthorizationMiddleware(next, "admin")
 	})
 	chain = chain.Append(middleware.RateLimitingMiddleware)
-	chain = chain.Append(middleware.CachingMiddleware)
 	chain = chain.Append(middleware.QuotaMiddleware)
-	chain = chain.Append(middleware.SecurityMiddleware)
+	chain = chain.Append(middleware.CachingMiddleware)
 	chain = chain.Append(middleware.LoggingMiddleware)
 
 	// API endpoints to the router
