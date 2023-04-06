@@ -30,6 +30,7 @@ func SetupRouter() *mux.Router {
 
 	// API endpoints to the router
 	router.Handle("/api/v1/hello", chain.ThenFunc(handlers.HelloHandler)).Methods("GET")
+	router.Handle("/api/v1/health", chain.ThenFunc(handlers.HealthHandler)).Methods("GET")
 
 	// Register pprof endpoints
 	router.HandleFunc("/debug/pprof/", pprof.Index)
