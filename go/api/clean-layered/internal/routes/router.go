@@ -29,9 +29,15 @@ func SetupRouter() *mux.Router {
 	chain = chain.Append(middleware.LoggingMiddleware)
 
 	// API endpoints to the router
+
+	// General endpoints
 	router.Handle("/api/v1/hello", chain.ThenFunc(handlers.HelloHandler)).Methods("GET")
 	router.Handle("/api/v1/health", chain.ThenFunc(handlers.HealthHandler)).Methods("GET")
 
+	// User endpoints
+	// router.Handle("/api/v1/convert/image/{from}/{to}", chain.ThenFunc(handlers.ConvertHandler)).Methods("POST")
+
+	// Debug endpoints
 	// Register pprof endpoints
 	router.HandleFunc("/debug/pprof/", pprof.Index)
 	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
